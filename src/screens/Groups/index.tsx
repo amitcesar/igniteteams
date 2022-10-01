@@ -8,11 +8,15 @@ import { Highlight } from "@components/Highlight";
 import { ListEmpty } from "@components/ListEmpty";
 
 import { Container } from "./styles";
+import { useNavigation } from "@react-navigation/native";
 
 export function Groups() {
   const [groups, setGroups] = useState<string[]>([]);
+  const { navigate } = useNavigation();
 
-  function handleNewGroup() {}
+  function handleNewGroup() {
+    navigate("newGroups");
+  }
 
   return (
     <Container>
