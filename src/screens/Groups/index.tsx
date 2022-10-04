@@ -29,6 +29,10 @@ export function Groups() {
     }
   }
 
+  async function handleOpenGroup(group: string) {
+    navigate("players", { group });
+  }
+
   useFocusEffect(
     useCallback(() => {
       fetchGroups();
@@ -44,7 +48,9 @@ export function Groups() {
       <FlatList
         data={groups}
         keyExtractor={(item) => item}
-        renderItem={({ item }) => <GroupCard title={item} />}
+        renderItem={({ item }) => (
+          <GroupCard title={item} onPress={() => handleOpenGroup(item)} />
+        )}
         contentContainerStyle={groups.length === 0 && { flex: 1 }}
         ListEmptyComponent={() => (
           <ListEmpty message="Cadastre uma tuma, lista vazia." />
