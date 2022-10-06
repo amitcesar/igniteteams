@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { FlatList } from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import { Button } from "@components/Button";
 import { GroupCard } from "@components/GroupCard";
@@ -7,8 +8,9 @@ import { Header } from "@components/Header";
 import { Highlight } from "@components/Highlight";
 import { ListEmpty } from "@components/ListEmpty";
 
+import { groupsGetAll } from "@storage/group/groupGetAll";
+
 import { Container } from "./styles";
-import { useNavigation } from "@react-navigation/native";
 
 export function Groups() {
   const [groups, setGroups] = useState<string[]>([]);
@@ -17,6 +19,25 @@ export function Groups() {
   function handleNewGroup() {
     navigate("newGroups");
   }
+
+  async function fetchGroups() {
+    try {
+      const response = await groupsGetAll();
+      setGroups(response);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleOpenGroup(group: string) {
+    navigate("players", { group });
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+    }, [])
+  );
 
   return (
     <Container>
@@ -27,7 +48,9 @@ export function Groups() {
       <FlatList
         data={groups}
         keyExtractor={(item) => item}
-        renderItem={({ item }) => <GroupCard title={item} />}
+        renderItem={({ item }) => (
+          <GroupCard title={item} onPress={() => handleOpenGroup(item)} />
+        )}
         contentContainerStyle={groups.length === 0 && { flex: 1 }}
         ListEmptyComponent={() => (
           <ListEmpty message="Cadastre uma tuma, lista vazia." />

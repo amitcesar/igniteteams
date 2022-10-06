@@ -1,6 +1,13 @@
-import React, { useState } from "react";
-import { useRoute } from "@react-navigation/native";
-import { FlatList } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { Alert, FlatList, TextInput } from "react-native";
+
+import { playerAddByGroup } from "@storage/player/playerAddByGroup";
+import { playerGetByGroupAndTeam } from "@storage/player/playerGetByGroupAndTeam";
+import { PlayerStorageDTO } from "@storage/player/PlayerStorageDTO";
+import { playerRemoveByGroup } from "@storage/player/playerRemoveByGroup";
+
+import { AppError } from "@utils/AppError";
 
 import { Header } from "@components/Header";
 import { Highlight } from "@components/Highlight";
@@ -10,8 +17,8 @@ import { Filter } from "@components/Filter";
 import { PlayerCard } from "@components/PlayerCard";
 import { ListEmpty } from "@components/ListEmpty";
 import { Button } from "@components/Button";
-
 import { Container, Form, HeaderList, NumberDisplay } from "./styles";
+import { groupRemoveByName } from "@storage/group/groupRemoveByName";
 
 type RouteParams = {
   group: string;
@@ -19,10 +26,98 @@ type RouteParams = {
 
 export function Players() {
   const [team, setTeam] = useState("Time A");
-  const [player, setPlayers] = useState([]);
+  const [player, setPlayers] = useState<PlayerStorageDTO[]>([]);
+  const [newPlayerName, setNewPlayerName] = useState("");
 
+  const navigation = useNavigation();
   const route = useRoute();
   const { group } = route.params as RouteParams;
+
+  const newPlayerNameInputRef = useRef<TextInput>(null);
+
+  async function handleAddPlayer() {
+    if (newPlayerName.trim().length === 0) {
+      Alert.alert("Novo Jogador", "Informe o nome de um jogador!");
+    }
+
+    const newPlayer = {
+      name: newPlayerName,
+      team,
+    };
+
+    try {
+      await playerAddByGroup(newPlayer, group);
+
+      newPlayerNameInputRef.current?.blur();
+      setNewPlayerName("");
+      getAllPlayersByTeam();
+    } catch (error) {
+      if (error instanceof AppError) {
+        Alert.alert("Novo Player", error.message);
+      } else {
+        console.log(error);
+        Alert.alert(
+          "Novo Jogador",
+          "Não foi possivel adicionar um novo jogador"
+        );
+      }
+    }
+  }
+
+  async function getAllPlayersByTeam() {
+    try {
+      const response = await playerGetByGroupAndTeam(group, team);
+      setPlayers(response);
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Listagem de players",
+        "Um erro inesperado aconteceu, tente novamente"
+      );
+    }
+  }
+
+  async function handleRemovePlayer(playerName: string) {
+    try {
+      await playerRemoveByGroup(playerName, group);
+      getAllPlayersByTeam();
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Remoção de Player, Error",
+        "Um erro inesperado aconteceu, tente novamente"
+      );
+    }
+  }
+
+  async function groupRemove() {
+    try {
+      await groupRemoveByName(group);
+      navigation.navigate("groups");
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Remover Grupo, Error",
+        "Um erro inesperado aconteceu, tente novamente"
+      );
+    }
+  }
+
+  async function handleGroupRemove() {
+    Alert.alert("Remover", "Deseja remover o grupo?", [
+      { text: "Não", style: "cancel" },
+      {
+        text: "Sim",
+        onPress: () => {
+          groupRemove();
+        },
+      },
+    ]);
+  }
+
+  useEffect(() => {
+    getAllPlayersByTeam();
+  }, [team]);
 
   return (
     <Container>
@@ -31,10 +126,18 @@ export function Players() {
       <Highlight title={group} subtitle="adicione a galera e separe os times" />
 
       <Form>
-        <Input autoCorrect={false} placeholder="Nome do participante" />
-
-        <ButtonIcon icon="add" />
+        <Input
+          inputRef={newPlayerNameInputRef}
+          autoCorrect={false}
+          placeholder="Nome do participante"
+          onChangeText={setNewPlayerName}
+          value={newPlayerName}
+          onSubmitEditing={handleAddPlayer}
+          returnKeyType="done"
+        />
+        <ButtonIcon icon="add" onPress={handleAddPlayer} />
       </Form>
+
       <HeaderList>
         <FlatList
           data={["Time A", "Time B"]}
@@ -53,9 +156,12 @@ export function Players() {
 
       <FlatList
         data={player}
-        keyExtractor={(item) => item}
+        keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
-          <PlayerCard name={item} onRemove={() => {}} />
+          <PlayerCard
+            name={item.name}
+            onRemove={() => handleRemovePlayer(item.name)}
+          />
         )}
         ListEmptyComponent={<ListEmpty message="Jogadores não encontrados!" />}
         showsVerticalScrollIndicator={false}
@@ -65,7 +171,11 @@ export function Players() {
         ]}
       />
 
-      <Button title="Remover turma" type="SECONDARY" />
+      <Button
+        title="Remover turma"
+        type="SECONDARY"
+        onPress={handleGroupRemove}
+      />
     </Container>
   );
 }
