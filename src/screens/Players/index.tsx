@@ -3,9 +3,9 @@ import { useRoute } from "@react-navigation/native";
 import { Alert, FlatList, TextInput } from "react-native";
 
 import { playerAddByGroup } from "@storage/player/playerAddByGroup";
-import { playersGetByGroup } from "@storage/player/playersGetByGroup";
 import { playerGetByGroupAndTeam } from "@storage/player/playerGetByGroupAndTeam";
 import { PlayerStorageDTO } from "@storage/player/PlayerStorageDTO";
+import { playerRemoveByGroup } from "@storage/player/playerRemoveByGroup";
 
 import { AppError } from "@utils/AppError";
 
@@ -75,6 +75,19 @@ export function Players() {
     }
   }
 
+  async function handleRemovePlayer(playerName: string) {
+    try {
+      await playerRemoveByGroup(playerName, group);
+      getAllPlayersByTeam();
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Remoção de Player, Error",
+        "Um erro inesperado aconteceu, tente novamente"
+      );
+    }
+  }
+
   useEffect(() => {
     getAllPlayersByTeam();
   }, [team]);
@@ -118,7 +131,10 @@ export function Players() {
         data={player}
         keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
-          <PlayerCard name={item.name} onRemove={() => {}} />
+          <PlayerCard
+            name={item.name}
+            onRemove={() => handleRemovePlayer(item.name)}
+          />
         )}
         ListEmptyComponent={<ListEmpty message="Jogadores não encontrados!" />}
         showsVerticalScrollIndicator={false}
